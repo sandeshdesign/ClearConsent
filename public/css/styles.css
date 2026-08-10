@@ -1,0 +1,508 @@
+/**
+ * styles.css
+ * -----------------------------------------------------------------------
+ * Palette & type scale carried over from ClearConsent/clearconsent-prototype.html
+ * (approved as the interim design system — see project notes). Kept in a
+ * single, isolated stylesheet with CSS custom properties so a future
+ * Design MD file can be dropped in by editing only the :root block below
+ * — no component markup or JS needs to change.
+ * -----------------------------------------------------------------------
+ */
+
+@font-face { font-family: 'Geist'; src: url('../assets/fonts/Geist/Geist-Regular.ttf') format('truetype'); font-weight: 400; }
+@font-face { font-family: 'Geist'; src: url('../assets/fonts/Geist/Geist-Medium.ttf') format('truetype'); font-weight: 500; }
+@font-face { font-family: 'Geist'; src: url('../assets/fonts/Geist/Geist-SemiBold.ttf') format('truetype'); font-weight: 600; }
+@font-face { font-family: 'Geist'; src: url('../assets/fonts/Geist/Geist-Bold.ttf') format('truetype'); font-weight: 700; }
+@font-face { font-family: 'Charter'; src: url('../assets/fonts/Charter/charter_regular.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Charter'; src: url('../assets/fonts/Charter/charter_bold.woff2') format('woff2'); font-weight: 700; }
+@font-face { font-family: 'Charter'; src: url('../assets/fonts/Charter/charter_italic.woff2') format('woff2'); font-style: italic; }
+
+:root {
+  /* ---------------------------------------------------------------------
+   * Color palette — sourced from design.md (ClearConsent design system
+   * export, 2026-08-08). Named `Color/blue/*`, `neutral/*`, `Color/sucess/*`
+   * [sic], `primary/*`, `text/*` and `spacing/*` tokens are the authoritative
+   * ClearConsent brand scale (verified against the Figma file's own
+   * get_variable_defs output) and are what's mapped below.
+   *
+   * NOTE — design.md also ships a second, unrelated set of tokens
+   * (accent/*, bg/*, fg/*, surface/*, button/primary/background #7F9CF5,
+   * shadows/default) that read like a generic starter-theme export (Chakra/
+   * Tailwind-style defaults) — they don't appear anywhere in the actual
+   * Home/PIN/Signed-forms screens inspected via the Figma MCP and are not
+   * used here. Flagging rather than wiring them in, since applying them
+   * (e.g. button/primary/background #7F9CF5, a lavender) would visibly
+   * clash with the real primary/default #1B4DFF used throughout every
+   * screen.
+   * ------------------------------------------------------------------- */
+  --primary: #1B4DFF;      /* primary/default, Color/blue/500 */
+  --primary-50: #F0F7FF;   /* no design.md token below 100; kept as a lighter tint */
+  --primary-100: #E8EDFF;  /* primary/100, Color/blue/100 */
+  --primary-200: #C6D2FF;  /* Color/blue/200 */
+  --primary-300: #8DA6FF;  /* Color/blue/300 */
+  --primary-600: #143ABF;  /* primary/600, Color/blue/600 */
+  --primary-700: #0E2780;  /* primary/700, Color/blue/700 */
+  --success: #469D8F;      /* Color/sucess/500 [sic in source] */
+  --success-bg: #ECF5F4;   /* Color/sucess/100 */
+  --success-text: #234F48; /* Color/sucess/700 — for text on --success-bg */
+  --danger: #E5484D;       /* no danger token in design.md; kept from the approved prototype */
+  --neutral-50: #F9FAFB;   /* no design.md token below 100; kept as a lighter tint */
+  --neutral-100: #EDEDED;  /* neutral/100, Color/gray/100 */
+  --neutral-200: #D1D1D1;  /* neutral/200, Color/gray/200 */
+  --neutral-300: #A3A3A3;  /* neutral/300, Color/gray/300 */
+  --neutral-400: #767676;  /* neutral/400, Color/gray/400 */
+  --neutral-500: #484848;  /* neutral/500, Color/gray/500 — also text/body */
+  --neutral-600: #363636;  /* neutral/600, Color/gray/600 */
+  --neutral-700: #242424;  /* neutral/700, Color/gray/700 — also text/headings */
+  --neutral-900: #121212;  /* neutral/800, Color/gray/800 */
+
+  /* Typography — design.md's own component/style table uses Geist for every
+     named UI style (body/*, headings/*) and Charter for body/large (used
+     here for legal/medical copy); "Roboto" only appears once, in the
+     Design Constraints footer's generic "Primary font" line, and is never
+     referenced by an actual named style. Treating that footer line as
+     boilerplate and keeping Geist/Charter, which also matches the Figma
+     file's own type/font-family/primary = "Geist" variable confirmed
+     earlier — flagging the contradiction rather than silently picking one. */
+  --font-ui: 'Geist', system-ui, sans-serif;
+  --font-medical: 'Charter', Georgia, serif;
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-2: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-3: 0 10px 15px -3px rgba(0,0,0,0.12);
+
+  --radius-sm: 4px;   /* border radius/small */
+  --radius-md: 8px;   /* border radius/medium (was 12px) */
+  --radius-lg: 16px;  /* border radius/large (was 20px) */
+  --touch-min: 48px;  /* scale/1300 = 48px — matches PRD 3.1 minimum touch footprint */
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Note: there is no #app wrapper element in index.html — <body> is the real
+   root the two .screen elements (#screen-pin, #screen-app) sit in directly.
+   Bounding body's height and hiding its own overflow (rather than the old
+   min-height, which let a screen grow taller than the viewport and scroll
+   at the page level) is what makes each screen's own .main-scroll region
+   the sole scrolling area — required for fixed bottom elements like the
+   Signature CTA bar to stay pinned instead of scrolling away with the page. */
+html, body { height: 100%; overflow: hidden; }
+body {
+  margin: 0 auto; font-family: var(--font-ui); color: var(--neutral-900);
+  background: var(--neutral-50); max-width: 900px; box-shadow: var(--shadow-2);
+}
+button, input, select, textarea { font-family: inherit; font-size: 16px; }
+button { min-height: var(--touch-min); cursor: pointer; }
+a { color: var(--primary); }
+
+/* Shared baseline for every text input / select / textarea in the app —
+   same padding, border, radius and touch-target height everywhere, so
+   fields don't drift out of sync (search bar, filters, language picker,
+   form fields) the way the hand-tuned per-component rules previously did.
+   Individual rules below only override what's genuinely different for
+   that context (icon inset padding, a shorter inline control, etc). */
+input[type="text"], input[type="date"], input[type="number"], input[type="tel"],
+input:not([type]), select, textarea {
+  padding: 13px 14px; border-radius: var(--radius-md); border: 1px solid var(--neutral-200);
+  background: #fff; min-height: var(--touch-min); color: var(--neutral-900);
+}
+
+/* Every date field (Date of Birth, Date of Visit, Last Dental Visit, ...)
+   gets the same explicit calendar icon instead of relying on the browser's
+   own — the native indicator renders inconsistently (size/style/sometimes
+   missing) across Android WebView versions. The real native indicator stays
+   in place but invisible and enlarged so tapping the icon still opens the
+   OS date picker. */
+input[type="date"] {
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23484848' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 18px 18px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0; cursor: pointer; width: 30px; height: 100%;
+}
+
+/* Every <select> in the app gets the same fixed 48px height (browsers render
+   a native select a few px taller than an <input> with identical padding —
+   min-height alone doesn't fix that) and the same custom chevron, so a plain
+   field select (e.g. Gender) looks identical to the search-bar / filter-row
+   selects instead of falling back to the native OS arrow and a mismatched
+   height. Component-specific rules should only adjust size, never re-add a
+   different chevron/appearance. */
+select {
+  height: var(--touch-min);
+  -webkit-appearance: none; appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23484848' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 16px;
+}
+
+h1, h2, h3, h4 { margin: 0 0 8px; font-weight: 700; }
+h1 { font-size: 28px; }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; margin-top: 22px; }
+.text-muted { color: var(--neutral-500); }
+.text-sm { font-size: 13px; }
+
+/* ---------- App shell ---------- */
+.screen { display: none; flex-direction: column; height: 100%; min-height: 0; }
+.screen.active { display: flex; flex: 1 1 auto; min-height: 0; }
+
+/* ---------- Clinic header (Module 2) ---------- */
+/* left icon (Settings) — centered clinic name/app tag — right icon (Patients) */
+.clinic-header {
+  display: grid; grid-template-columns: var(--touch-min) 1fr var(--touch-min);
+  align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--neutral-100); background: #fff;
+}
+.clinic-header .brand-text { text-align: center; }
+.clinic-header .brand-text h4 { margin: 0; font-size: 16px; }
+.clinic-header .brand-text span { font-size: 11px; font-weight: 800; color: var(--neutral-600); letter-spacing: 1.2px; }
+.icon-btn {
+  width: var(--touch-min); height: var(--touch-min); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; background: var(--neutral-100);
+  border: none; flex-shrink: 0; color: var(--neutral-900);
+}
+.icon-btn:active { background: var(--neutral-200); }
+.icon-btn-sm {
+  width: 36px; height: 36px; min-height: 36px; border-radius: 50%; border: none;
+  background: var(--neutral-100); display: flex; align-items: center; justify-content: center; color: var(--neutral-500);
+}
+.icon-btn-sm:active { background: var(--neutral-200); }
+
+#screen-root { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* The Home screen renders its tab body into this slot; it needs the same
+   flex/min-height containment as #screen-root so the .search-row + .main-scroll
+   markup renderFormsTab()/renderSignedTab() produce actually scrolls inside
+   it, instead of growing the whole screen. */
+#home-tab-content { flex: 1; display: flex; flex-direction: column; min-height: 0; padding-left: 48px; padding-right: 48px; }
+
+/* ---------- PIN screen (Module 1) ---------- */
+.pin-screen { flex: 1; justify-content: center; align-items: center; padding: 40px; text-align: center; }
+#pin-app-name { font-size: 42px; line-height: 52px; margin: 0 0 4px; }
+.pin-dots { display: flex; gap: 16px; justify-content: center; margin: 28px 0; }
+.dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--neutral-300); transition: 0.15s; }
+.dot.filled { background: var(--primary); border-color: var(--primary); transform: scale(1.15); }
+.numpad { display: grid; grid-template-columns: repeat(3, minmax(64px, 92px)); gap: 18px; justify-content: center; margin: 0 auto; }
+.key {
+  width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--neutral-50); border: 1px solid var(--neutral-200);
+  display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600; user-select: none;
+  min-height: var(--touch-min); background-color: #fff; box-shadow: var(--shadow-2);
+}
+.key:active { background: var(--neutral-200); }
+.shake { animation: shake 0.4s; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+/* ---------- Screen header / top bar ---------- */
+.top-bar {
+  display: flex; align-items: center; gap: 8px; padding: 14px 12px;
+  border-bottom: 1px solid var(--neutral-100); background: #fff; position: sticky; top: 0; z-index: 20;
+}
+.top-bar h2 { margin: 0; font-size: 17px; }
+.back-btn { width: var(--touch-min); height: var(--touch-min); border-radius: 50%; border: none; background: none; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.back-btn:active { background: var(--neutral-100); }
+
+/* Screens that don't use #screen-root as a flex column with their own
+   scroll region still need the root to size correctly */
+#screen-root > .top-bar { flex-shrink: 0; }
+
+/* ---------- Tabs (also used for the Home Consent Forms / Signed Forms switch) ----------
+   Figma spec: plain underline text-tabs (no pill/segmented background) — active tab is
+   primary-colored text with a 2px bottom border, inactive tabs are neutral text. */
+.tabs { display: flex; gap: 8px; padding: 0 16px; overflow-x: auto; flex-shrink: 0; border-bottom: 1px solid var(--neutral-200); background-color: #fff; box-shadow: var(--shadow-2);}
+.tab {
+  padding: 14px 10px; border: none; background: none; border-bottom: 2px solid transparent;
+  color: var(--neutral-500); font-weight: 600; white-space: nowrap; min-height: var(--touch-min);
+  border-radius: 0;
+}
+.tab.active { background: none; color: var(--primary); border-bottom-color: var(--primary); }
+/* Home Consent Forms / Signed Forms switch: each tab centered within its own
+   even share of the row (matches design spec), rather than left-packed. */
+.home-tabs { justify-content: center; }
+.home-tabs .tab { flex: 1 1 0; max-width: 220px; text-align: center; }
+
+/* ---------- Search ---------- */
+.search-row { padding: 12px 16px 12px; position: relative; flex-shrink: 0;  vertical-align:middle;}
+.search-row input { width: 100%; height: 48px; padding-left: 46px; /* room for the search icon; rest inherited from the shared baseline */ }
+.search-row svg { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); color: var(--neutral-400); pointer-events: none; }
+
+/* Filter row (Signed Forms tab): Date + Type dropdowns + search.
+   Top padding matches .search-row's own 12px so the module lines up with
+   every other screen's search bar instead of sitting flush under the tabs.
+   Native <select> boxes render inconsistently across browsers even with
+   matching padding/min-height (macOS Chrome/Safari especially shrink them
+   below an <input> with identical CSS), so appearance is reset and height
+   is set explicitly to the same 48px as the search input, with a custom
+   chevron replacing the native one. */
+.filter-row { display: flex; gap: 10px; align-items: center; padding: 12px 16px; flex-wrap: wrap; flex-shrink: 0; }
+.filter-row .filter-search { padding: 0; flex: 1; min-width: 160px; }
+.filter-row .filter-search input { height: 48px; padding-left: 40px; }
+/* .search-row's own left padding (which the base icon offset assumes) is
+   zeroed out here via `.filter-search { padding: 0 }` above, so the icon
+   and the input's padding-left need their own offsets recalculated —
+   otherwise the icon and the placeholder text nearly touch (18px icon at
+   left:30 vs. text starting at 46, once the row's 16px padding is gone). */
+.filter-row .filter-search svg { left: 14px; }
+/* Height, chevron and padding-right all come from the global `select` rule
+   now — this class only needs to set the label's own font treatment. */
+.lang-select-inline { font-weight: 600; font-size: 14px; line-height: 1; }
+
+/* ---------- Layout: master-detail on tablet/desktop ---------- */
+.main-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 16px;}
+.split-view { display: flex; flex: 1; min-height: 0; }
+.split-master { width: 100%; overflow-y: auto; border-right: none; display: flex; flex-direction: column; }
+.split-detail { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+
+@media (min-width: 820px) {
+  .split-master { width: 380px; border-right: 1px solid var(--neutral-100); flex-shrink: 0; }
+  .split-detail { display: block; }
+}
+
+/* ---------- List rows (forms, patients, signed forms) ---------- */
+.form-list { display: flex; flex-direction: column; }
+.list-row {
+  display: flex; align-items: center; gap: 14px; padding: 24px 24px; border-radius: 8px;
+  border: 1px solid var(--neutral-100); margin-bottom: 10px; background: #fff; min-height: var(--touch-min); box-shadow: var(--shadow-1); margin-bottom: 16px;
+}
+.list-row:active { background: var(--primary-50); }
+.avatar {
+  width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; background: var(--primary-100); color: var(--primary-600); flex-shrink: 0;
+}
+.icon-sq-sm { border-radius: 8px; padding: 8px; }
+.icon-sq-sm svg { width: 32px; height: 32px; }
+.list-row .meta { flex: 1; min-width: 0; }
+.list-row .meta p { margin: 0; }
+.list-row .meta .name { font-weight: 700; }
+.list-row .meta .sub { font-size: 13px; color: var(--neutral-500); }
+
+/* A-Z section headers, left-aligned inline above each letter group in the
+   All Patients list — replaces the old tap-to-jump right-side index strip. */
+.az-group-label { font-weight: 700; color: var(--neutral-500); margin: 18px 4px 10px; }
+
+/* ---------- Buttons ---------- */
+.btn-primary {
+  background: var(--primary); color: #fff; border: none; border-radius: 14px;
+  padding: 14px 20px; font-weight: 700; font-size: 16px; width: 100%; min-height: var(--touch-min);
+}
+.btn-primary:active { background: var(--primary-600); }
+.btn-primary:disabled { background: var(--neutral-300); cursor: not-allowed; }
+.btn-outline {
+  background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 14px;
+  padding: 12px 20px; font-weight: 700; width: 100%; min-height: var(--touch-min);
+}
+.btn-danger-text { background: none; border: none; color: var(--danger); font-weight: 700; padding: 14px; min-height: var(--touch-min); width: 100%; }
+
+.sticky-bottom { padding: 16px 80px calc(16px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--neutral-100); display: flex; flex-direction: column; gap: 10px; background: #fff; position: sticky; bottom: 0; flex-shrink: 0; }
+
+/* Shared 80px side inset for screen content, matching the consent/intake
+   screens, WITHOUT consent-body's legal-copy typography (font-size/line-height/
+   padding-bottom on p, h2, h3, etc.) — for screens like Patient Profile, Settings,
+   and the patient picker that just need consistent side margins for plain UI. */
+.content-inset { padding-left: 80px; padding-right: 80px; }
+
+/* ---------- Forms / inputs ---------- */
+.field { margin-bottom: 16px; }
+.field label { display: block; font-weight: 700; font-size: 13px; color: var(--neutral-500); margin-bottom: 6px; }
+.field input, .field select, .field textarea { width: 100%; /* box styling inherited from the shared baseline above */ }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* Used for the Patient Case History form's checkbox/radio-group rows
+   (Symptoms/Progression/Onset, Previous Treatments/Habits/Diet, etc) so
+   three related option lists sit side by side instead of stacking full-
+   width — much faster to scan. Collapses to one column on phones, where
+   three columns of checkboxes would be too cramped to tap reliably. */
+.field-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; }
+/* align-items:center handles horizontal centering of the row, but a native
+   checkbox has its own default vertical-align/margin that can nudge it a
+   couple of px off the label's text — reset those so the box truly sits on
+   the label's vertical middle. Gap matches radioGroup()'s 8px so checkbox
+   and radio rows read as the same control family. */
+.check-row { display: flex; align-items: center; gap: 8px; padding: 10px 4px; border-bottom: 1px solid var(--neutral-100); min-height: var(--touch-min); }
+.check-row input[type=checkbox], .check-row input[type=radio] { width: 20px; height: 20px; margin: 0; flex-shrink: 0; vertical-align: middle; }
+/* .field label {display:block} (used for field headings like "Symptoms")
+   also matches these check-row labels when nested inside a .field div,
+   silently killing the flex layout above and the 8px checkbox-to-label
+   gap with it. Restore it explicitly with higher specificity so every
+   checkbox/radio row gets the same consistent gap regardless of what
+   wraps it (.field, .mh-grid, etc). */
+.field label.check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 0; }
+
+/* Medical History: two aligned columns (Condition checkboxes / Remarks
+   inputs) instead of stacked flex cards — each condition's checkbox and its
+   remark field sit on the same grid row. */
+.mh-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; row-gap: 2px; align-items: center; margin-bottom: 16px; }
+.mh-col-header { font-weight: 700; font-size: 13px; color: var(--neutral-500); padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid var(--neutral-100); }
+.mh-grid input[type="text"], .mh-grid input:not([type]) { width: 100%; }
+fieldset { border: 1px solid var(--neutral-200); border-radius: 14px; margin: 0 0 20px; padding: 14px; }
+legend { font-weight: 700; padding: 0 6px; }
+
+/* ---------- Consent screen (Module 6): header + language/font controls
+   + clinic brand row + numbered sections + in-line signature card ---------- */
+.controls-row {
+  display: flex; justify-content: space-between; align-items: center; padding:16px; padding-left: 80px; padding-right:80px;
+  background: var(--neutral-50);  flex-wrap: wrap; gap: 10px; flex-shrink: 0; border-bottom: 1px solid var(--neutral-100);
+}
+/* Language picker intentionally kept at the same 48px height as every other
+   select/input in the app (search bars, filters, form fields) instead of a
+   one-off compact size — a previous min-height:36px override here also had
+   the side effect of clobbering the chevron's right padding, hiding it. */
+.font-ctrl { display: flex; background: var(--neutral-100); border-radius: 20px; overflow: hidden; }
+.font-ctrl button { border: none; background: none; padding: 6px 14px; font-weight: 700; min-height: 36px; }
+
+/* Uses margin (not padding) for the side inset so the border-bottom is drawn
+   at the inset edge itself, exactly matching the width of consent-body's
+   content below (which is inset by the same amount via its own padding) —
+   padding would draw the border at the full-bleed box edge instead, wider
+   than the content it's supposed to underline. */
+.clinic-brand-row { display: flex; align-items: center; gap: 12px; margin: 0 80px 24px; padding-bottom: 16px; border-bottom: 1px solid var(--neutral-200); }
+.clinic-brand-logo svg { border-radius: 8px; display: block; }
+.clinic-brand-name { margin: 0; font-weight: 700; font-size: 14px; }
+.clinic-brand-addr { margin: 0; font-size: 12px; color: var(--neutral-500); }
+
+.consent-body { font-family: var(--font-medical); line-height: 1.65; padding-left: 80px; padding-right: 80px; padding-bottom: 48px; }
+/* The A-/A+ control (#consent-sections in app.js) sets font-size in px
+   directly on this element (default 16px, range 13-26px). Everything below
+   is sized in em/unitless-line-height off that base so the whole legal
+   text block — headings, body copy, checklist items — scales together
+   instead of only the container's own (invisible) font-size changing. */
+.consent-body h2 { font-family: var(--font-ui); font-size: 2.625em; line-height: 1.2; border-bottom: 1px solid var(--neutral-300); padding-bottom: 24px; color: var(--neutral-700); }
+.consent-body h3 { font-family: var(--font-ui); font-size: 1.5em; line-height: 1.25; color: var(--neutral-900); padding-bottom: 16px;  }
+/* Patient Case History section headers get a bottom rule to separate the
+   form's numbered sections (Patient Details, Patient Information, etc.). */
+.intake-body h3 { border-bottom: 1px solid var(--neutral-200); }
+.consent-body ul.check-list { list-style: none; padding-left: 0; margin: 8px 0; font-size: 1.5em; line-height: 1.25;}
+.consent-body ul.check-list li { padding: 6px 0 6px 28px; position: relative; }
+.consent-body ul.check-list li::before {
+  content: ""; position: absolute; left: 0; top: 7px; width: 18px; height: 18px; border-radius: 5px;
+  background: var(--primary); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+  background-size: 12px 12px; background-repeat: no-repeat; background-position: center;
+}
+.consent-body p{font-size: 1.25em; line-height: 1.6; padding-bottom: 24px;}
+
+/* Patient details compact table (name/gender/dob, then contact/address) */
+/* Flush with the page (no side padding, no card background) with a solid
+   divider under the heading and between rows — was a padded, rounded gray
+   card with dashed row dividers, which read as a separate boxed-in widget
+   rather than part of the page. */
+.patient-table { background: transparent; border-radius: 0; padding: 16px 0 0; font-family: var(--font-ui); border-top: 1px solid var(--neutral-200); }
+/* Inside the Patient Case History form, the "1. Patient Details" <h3>
+   already draws its own bottom rule (.intake-body h3 below) directly above
+   this table — without this override the table's own border-top drew a
+   second line right beneath it, reading as a doubled border. */
+.intake-body .patient-table { border-top: none; padding-top: 0; }
+.pt-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-bottom: 16px; }
+/* Same 3-column grid as the row above (not its own 2-column grid) so Contact
+   Number lines up under Name and Address lines up under Gender, instead of
+   each row computing its own column widths independently. */
+.pt-row.pt-row-2 { margin-top: 0; padding-top: 16px; border-top: 1px solid var(--neutral-200); }
+.pt-label { display: block; font-size: 12px; line-height: 12px; color: var(--neutral-400); font-weight: 400; }
+.pt-value { display: block; font-size: 14px; margin-top: 4px; }
+
+/* ---------- Signature: read-first flow ----------
+   The consent text scrolls on its own; signing only happens after the
+   patient taps the "Signature" CTA, which slides up a bottom sheet
+   containing the pad — the pad is never visible inline with the legal
+   text (matches the reference flow: read → tap Signature → drawer → sign). */
+.sign-cta-bar {
+  padding: 16px 80px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--neutral-100); background: #fff; flex-shrink: 0;
+}
+.sign-cta-bar .btn-primary { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.sign-cta-bar .btn-primary svg { width: 18px; height: 18px; }
+.sign-cta-bar .btn-primary.is-signed { background: var(--success); }
+
+.sig-drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+}
+.sig-drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+.sig-drawer {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 1600;
+  max-width: 900px; margin: 0 auto; background: #fff;
+  border-radius: 20px 20px 0 0; box-shadow: var(--shadow-3);
+  padding: 10px 32px calc(20px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-ui);
+  transform: translateY(105%); transition: transform 0.28s cubic-bezier(.32,.72,0,1);
+  max-height: 88vh; overflow-y: auto;
+}
+.sig-drawer.open { transform: translateY(0); }
+.sig-drawer-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--neutral-200); margin: 6px auto 14px; }
+.signature-card-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 10px; }
+.sig-wrap { position: relative; }
+#sig-pad {
+  border: 2px dashed var(--neutral-300); border-radius: var(--radius-lg); background: var(--neutral-50);
+  width: 100%; height: 220px; touch-action: none; display: block;
+}
+.sig-placeholder {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px;
+  color: var(--neutral-400); font-weight: 600; pointer-events: none;
+}
+.legal-disclaimer { font-size: 13px; color: var(--neutral-500); margin: 14px 0 16px; line-height: 1.5; }
+
+/* ---------- Registry (Module 7) ---------- */
+.registry-group-label { font-weight: 700; color: var(--neutral-500); margin: 18px 4px 10px; }
+
+/* ---------- Toast & modal ---------- */
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000;
+  background: var(--neutral-900); color: #fff; padding: 12px 22px; border-radius: 30px; font-size: 14px; display: none;
+  box-shadow: var(--shadow-3); max-width: 90vw; text-align: center;
+}
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px;
+}
+.modal { background: #fff; padding: 32px 24px; border-radius: 24px; text-align: center; width: 100%; max-width: 380px; }
+
+.badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+.badge-success { background: var(--success-bg); color: var(--success-text); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--neutral-500); }
+
+@media (max-width: 480px) {
+  .numpad { grid-template-columns: repeat(3, 1fr); }
+  .pt-row { grid-template-columns: 1fr 1fr; }
+  .field-row-3 { grid-template-columns: 1fr; }
+  #home-tab-content .filter-row{padding-top: 13px;}
+  #home-tab-content .filter-search{flex-basis:100%;width:100%;}
+  #home-tab-content .filter-search svg{position:absolute;left:0;top:50%;transform:translateY(-50%);color:var(--neutral-400);pointer-events:none;padding:0}
+  #home-tab-content .filter-search{padding:12px 16px;position:relative;flex-shrink:0}
+
+  /* The consent screen's 80px side padding / 42px heading are sized for
+     tablet+/desktop; on a phone they leave almost no room for text and
+     wrap the h2 across 3–4 lines. Scale both down for narrow viewports. */
+  #home-tab-content { padding-left: 16px; padding-right: 16px; }
+  .controls-row { padding-left: 16px; padding-right: 16px; }
+  .clinic-brand-row { margin: 0 16px 16px; }
+  .consent-body { padding-left: 16px; padding-right: 16px; }
+  .consent-body h2 { font-size: 1.625em; padding-bottom: 14px; }
+  .consent-body h3 { font-size: 1.0625em; line-height: 1.3; padding-bottom: 8px; }
+  .consent-body p { font-size: 1em; line-height: 1.6; padding-bottom: 16px; }
+  .consent-body ul.check-list { font-size: 1em; line-height: 1.6; }
+  .sign-cta-bar { padding-left: 16px; padding-right: 16px; }
+  .content-inset { padding-left: 16px; padding-right: 16px; }
+  .sticky-bottom { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ---------- Print / PDF export ----------
+   Share on a signed consent record calls window.print(). The exported
+   PDF should contain only the doctor details, patient details, and the
+   signed consent form itself (including its own header) — none of the
+   app chrome (global clinic header, screen top-bar with back/share
+   buttons, toasts, modals, bottom nav) should appear in the output. */
+@media print {
+  .clinic-header, .top-bar, .sticky-bottom, .home-tabs,
+  #toast, .modal-overlay, .search-row {
+    display: none !important;
+  }
+  html, body, #screen-app, #screen-root, .main-scroll {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  .main-scroll { padding: 0 !important; }
+  .clinic-brand-row { margin: 0 0 16px !important; }
+  .consent-body { padding: 0 !important; }
+}
+
+@page { margin: 16mm; }

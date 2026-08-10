@@ -1,0 +1,12 @@
+{
+  "appId": "com.drpraveen.clearconsent",
+  "appName": "ClearConsent",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

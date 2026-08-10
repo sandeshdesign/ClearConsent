@@ -1,0 +1,23 @@
+{
+  "name": "clearconsent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline-first dental clinic consent and patient-management app for Dr. Praveen's Dental Clinic. Runs 100% locally on Android phones, 8\"+ tablets, or as a local desktop/web app.",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "watch": "node scripts/watch.js",
+    "start": "npm run build && npx --yes serve public -l 5173",
+    "cap:add:android": "npm run build && npx cap add android",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open:android": "npx cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

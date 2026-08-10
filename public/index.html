@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ClearConsent — Dr. Praveen's Dental Clinic</title>
+<link rel="icon" href="assets/icons/app-icon.svg">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ============================================================
+       PIN SCREEN (Module 1)
+  ============================================================= -->
+  <div id="screen-pin" class="screen active">
+    <div class="pin-screen">
+      <div id="pin-logo" style="margin-bottom:8px;"></div>
+      <h1 id="pin-app-name">ClearConsent</h1>
+      <p class="text-muted" id="pin-tagline">Secure Consent Management</p>
+      <div class="pin-dots" id="pin-dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="numpad" id="numpad"></div>
+      <p style="margin-top:28px;color:var(--primary);font-weight:700;cursor:pointer;" id="forgot-pin-link">Forgot PIN?</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MAIN APP SHELL (Modules 2-8) — screens rendered into #screen-root
+  ============================================================= -->
+  <div id="screen-app" class="screen">
+    <div class="clinic-header">
+      <!-- icons/doctor/doctor_24.svg — Clinic / Doctor Settings -->
+      <button class="icon-btn" id="settings-icon-btn" title="Clinic settings" aria-label="Clinic settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.8173 10.485L13.7554 11.2965C13.2074 11.7109 12.5392 11.9351 11.8521 11.9351C11.1651 11.9351 10.4968 11.7109 9.94881 11.2965L8.88697 10.485C8.43663 10.1439 8.07122 9.70332 7.81926 9.19766C7.56729 8.69199 7.4356 8.13494 7.43445 7.56999V6.00727C7.43441 5.47683 7.53969 4.95166 7.74418 4.46222C7.94867 3.97278 8.24831 3.52881 8.62571 3.15607C9.00311 2.78333 9.45077 2.48923 9.94271 2.29083C10.4347 2.09243 10.9611 1.99369 11.4915 2.00032H12.2027C12.7374 1.99359 13.268 2.09394 13.7632 2.29544C14.2585 2.49694 14.7084 2.79553 15.0865 3.17361C15.4646 3.55169 15.7631 4.00161 15.9646 4.49688C16.1662 4.99214 16.2665 5.52272 16.2598 6.05736V7.56999C16.2606 8.13424 16.1307 8.69102 15.8805 9.19674C15.6302 9.70246 15.2663 10.1434 14.8173 10.485Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19.0398C5 17.1535 5.74933 15.3445 7.08316 14.0106C8.41698 12.6768 10.226 11.9275 12.1123 11.9275C13.9987 11.9275 15.8077 12.6768 17.1415 14.0106C18.4754 15.3445 19.2247 17.1535 19.2247 19.0398C19.2247 22.9867 5 22.9867 5 19.0398Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.7469 15.3535V12.9894" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.2345 18.8796V17.1066C13.2371 16.7062 13.3973 16.323 13.6804 16.0399C13.9635 15.7568 14.3468 15.5966 14.7471 15.5939C14.9458 15.5939 15.1425 15.6331 15.326 15.7091C15.5095 15.7851 15.6763 15.8965 15.8167 16.037C15.9572 16.1774 16.0686 16.3442 16.1446 16.5277C16.2206 16.7112 16.2597 16.9079 16.2597 17.1066V18.8796" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.33765 15.3535V12.9894" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.33765 18.6692V17.958" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="brand-text">
+        <h4 id="header-clinic-name">Dr. Praveen's Dental Clinic</h4>
+        <span id="header-clinic-tag">CLEARCONSENT</span>
+      </div>
+      <!-- icons/fi_users.svg — All Patients directory -->
+      <button class="icon-btn" id="patients-icon-btn" title="Patients" aria-label="Patients">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div id="screen-root"></div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="success-modal" class="modal-overlay">
+    <div class="modal">
+      <div style="width:72px;height:72px;background:var(--success-bg);color:var(--success);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h3 id="success-title">Consent Signed Successfully</h3>
+      <button class="btn-primary" id="success-done-btn">Done</button>
+    </div>
+  </div>
+
+  <div id="delete-confirm-modal" class="modal-overlay">
+    <div class="modal">
+      <div style="width:72px;height:72px;background:var(--danger-bg,#fdecec);color:var(--danger);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      </div>
+      <h3>Delete this patient?</h3>
+      <p class="text-muted" style="margin:8px 0 24px;">Deleting this patient will permanently remove their signed consent form.</p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-outline" id="delete-confirm-cancel-btn">Cancel</button>
+        <button class="btn-primary" id="delete-confirm-delete-btn" style="background:var(--danger);">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/forms-data.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
