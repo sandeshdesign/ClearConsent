@@ -378,6 +378,15 @@ legend { font-weight: 700; padding: 0 6px; }
 }
 .consent-body p{font-size: 1.25em; line-height: 1.6; padding-bottom: 24px;}
 
+/* Interactive checklist (e.g. "Required Radiographs" on the Dental
+   Imaging / Radiology form) — real, tappable checkboxes on the live
+   consent screen, defaulting to checked. Reuses .check-row (the same
+   row-per-item, bottom-border style used by Symptoms/Habits/etc. on the
+   Patient Case History form) so both interactive checklists in the app
+   look and behave identically, stacked vertically top to bottom. */
+.consent-body .check-list.interactive { margin: 8px 0; }
+.consent-body .check-list.interactive .check-row { font-size: 1.5em; }
+
 /* Patient details compact table (name/gender/dob, then contact/address) */
 /* Flush with the page (no side padding, no card background) with a solid
    divider under the heading and between rows — was a padded, rounded gray
@@ -458,6 +467,25 @@ legend { font-weight: 700; padding: 0 6px; }
 
 .empty-state { text-align: center; padding: 40px 20px; color: var(--neutral-500); }
 
+/* 8"+ Android tablets in portrait (locked orientation — see
+   capacitor.config.json / AndroidManifest.xml) commonly report a CSS
+   width in the 481-819px range, below the min-width:820px split-view
+   breakpoint above. Without this, they'd inherit the desktop consent
+   screen's 80px side padding / 42px heading, which reads oversized and
+   cramped on a one-column portrait layout. Scaled down here, distinct
+   from the phone override below (max-width:480), which goes further. */
+@media (min-width: 481px) and (max-width: 819px) {
+  #home-tab-content { padding-left: 32px; padding-right: 32px; }
+  .controls-row { padding-left: 32px; padding-right: 32px; }
+  .clinic-brand-row { margin: 0 32px 20px; }
+  .consent-body { padding-left: 32px; padding-right: 32px; }
+  .consent-body h2 { font-size: 2.125em; padding-bottom: 20px; }
+  .consent-body h3 { font-size: 1.25em; padding-bottom: 12px; }
+  .sign-cta-bar { padding-left: 32px; padding-right: 32px; }
+  .content-inset { padding-left: 32px; padding-right: 32px; }
+  .sticky-bottom { padding-left: 32px; padding-right: 32px; }
+}
+
 @media (max-width: 480px) {
   .numpad { grid-template-columns: repeat(3, 1fr); }
   .pt-row { grid-template-columns: 1fr 1fr; }
@@ -478,6 +506,7 @@ legend { font-weight: 700; padding: 0 6px; }
   .consent-body h3 { font-size: 1.0625em; line-height: 1.3; padding-bottom: 8px; }
   .consent-body p { font-size: 1em; line-height: 1.6; padding-bottom: 16px; }
   .consent-body ul.check-list { font-size: 1em; line-height: 1.6; }
+  .consent-body .check-list.interactive .check-row { font-size: 1em; }
   .sign-cta-bar { padding-left: 16px; padding-right: 16px; }
   .content-inset { padding-left: 16px; padding-right: 16px; }
   .sticky-bottom { padding-left: 16px; padding-right: 16px; }
