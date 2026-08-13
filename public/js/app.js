@@ -126,6 +126,17 @@ const state = {
 // ---------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------
+// Last-resort safety net: if ANY promise rejects without being caught
+// anywhere in the app (a storage error we didn't anticipate, a bug),
+// surface it as a toast instead of letting the tap/click that triggered
+// it silently do nothing — which is exactly what "nothing happens when
+// I press the button" bug reports look like from the outside.
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("Unhandled error:", e.reason);
+  const msg = e.reason && e.reason.message ? e.reason.message : String(e.reason || "Unknown error");
+  toast("Something went wrong — " + msg);
+});
+
 async function boot() {
   await I18N.load();
   document.getElementById("pin-logo").innerHTML = PIN_APP_ICON_SVG;
@@ -863,6 +874,7 @@ async function renderIntake(params) {
       document.getElementById("sig-drawer-overlay").onclick = () => closeSigDrawer();
       document.getElementById("provide-consent-btn").onclick = async () => {
         if (!state.strokes.length) { toast("Please sign before saving."); return; }
+        const btn = document.getElementById("provide-consent-btn");
         const record = {
           id: existing ? existing.id : undefined,
           patientId: params.patientId,
@@ -879,14 +891,26 @@ async function renderIntake(params) {
           sleep: radioValue("i-sleep"), brushingFrequency: radioValue("i-brushing"), brushType: radioValue("i-brushtype"),
           signatureImage: sigCanvas.toDataURL("image/png")
         };
-        await DB.saveIntake(record);
-        // Per clinic request: land on the Signed Forms tab after saving,
-        // same as every other form — not the Patient Profile page. Note
-        // the Case History record itself won't appear in that list (it's
-        // stored separately from signed consent forms), but the "success"
-        // landing spot is now consistent across all forms.
-        document.getElementById("success-title").textContent = "Case History Saved";
-        document.getElementById("success-modal").style.display = "flex";
+        // Saving can genuinely fail (private-browsing storage restrictions,
+        // full disk, a browser blocking IndexedDB) — previously an error
+        // here was silently swallowed: the click did nothing and nothing
+        // told the patient/dentist why. Now it's caught and surfaced.
+        try {
+          btn.disabled = true;
+          await DB.saveIntake(record);
+          // Per clinic request: land on the Signed Forms tab after saving,
+          // same as every other form — not the Patient Profile page. Note
+          // the Case History record itself won't appear in that list (it's
+          // stored separately from signed consent forms), but the "success"
+          // landing spot is now consistent across all forms.
+          document.getElementById("success-title").textContent = "Case History Saved";
+          document.getElementById("success-modal").style.display = "flex";
+        } catch (err) {
+          console.error("Failed to save Patient Case History:", err);
+          toast("Could not save — " + (err && err.message ? err.message : "storage error. Try again or check browser storage settings."));
+        } finally {
+          btn.disabled = false;
+        }
       };
     }
   };
@@ -1196,31 +1220,42 @@ function updateSignatureUiState() {
 
 async function submitConsent(params, patient, form, lang, checklistSelected) {
   if (!state.strokes.length) { toast("Please sign before providing consent."); return; }
-  const signatureImage = sigCanvas.toDataURL("image/png"); // Base64/PNG raster, per PRD 3.2
-  const { content: rawContent } = I18N.formContent(form.id, form.fallback, lang);
-  const content = withFinancialClause(rawContent);
-  const record = {
-    patientId: params.patientId,
-    formId: form.id,
-    formName: form.name,
-    language: lang,
-    languageLabel: I18N.languages()[lang],
-    signatureImage,
-    textSnapshot: content,
-    // checklistSelected: which items were actually left checked at signing
-    // time (e.g. "Required Radiographs") — baked in so the signed/printed
-    // record reflects what was really agreed to, not the full item list.
-    formConfig: {
-      checklist: form.checklist,
-      checklistLabel: form.checklistLabel,
-      checklistSelected: checklistSelected ? Array.from(checklistSelected) : undefined
-    },
-    clinicSnapshot: await DB.getSettings(),
-    patientSnapshot: patient
-  };
-  await DB.saveSignedForm(record);
-  document.getElementById("success-title").textContent = I18N.t("ui.consentSignedSuccess");
-  document.getElementById("success-modal").style.display = "flex";
+  const submitBtn = document.getElementById("provide-consent-btn");
+  try {
+    if (submitBtn) submitBtn.disabled = true;
+    const signatureImage = sigCanvas.toDataURL("image/png"); // Base64/PNG raster, per PRD 3.2
+    const { content: rawContent } = I18N.formContent(form.id, form.fallback, lang);
+    const content = withFinancialClause(rawContent);
+    const record = {
+      patientId: params.patientId,
+      formId: form.id,
+      formName: form.name,
+      language: lang,
+      languageLabel: I18N.languages()[lang],
+      signatureImage,
+      textSnapshot: content,
+      // checklistSelected: which items were actually left checked at signing
+      // time (e.g. "Required Radiographs") — baked in so the signed/printed
+      // record reflects what was really agreed to, not the full item list.
+      formConfig: {
+        checklist: form.checklist,
+        checklistLabel: form.checklistLabel,
+        checklistSelected: checklistSelected ? Array.from(checklistSelected) : undefined
+      },
+      clinicSnapshot: await DB.getSettings(),
+      patientSnapshot: patient
+    };
+    await DB.saveSignedForm(record);
+    document.getElementById("success-title").textContent = I18N.t("ui.consentSignedSuccess");
+    document.getElementById("success-modal").style.display = "flex";
+  } catch (err) {
+    // Same reasoning as the Patient Case History save above: a storage
+    // failure here previously looked like the button just did nothing.
+    console.error("Failed to save signed consent form:", err);
+    toast("Could not save — " + (err && err.message ? err.message : "storage error. Try again or check browser storage settings."));
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
 function closeSuccessModal() {
