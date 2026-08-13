@@ -661,7 +661,19 @@ async function renderPatientDetail(params) {
 async function patientDetailMarkup(patientId) {
   const p = await DB.getPatient(patientId);
   if (!p) return `<div class="empty-state">Patient not found.</div>`;
-  const signed = await DB.getSignedFormsByPatient(patientId);
+  // Same gap as the Home Signed Forms tab had: Patient Case History lives
+  // in a separate object store from signed consent forms, so it has to be
+  // fetched and merged in here explicitly too — otherwise a patient's own
+  // profile page silently omits their Case History even though it shows
+  // up correctly in the app-wide Signed Forms list.
+  const [signedForms, intake] = await Promise.all([
+    DB.getSignedFormsByPatient(patientId),
+    DB.getIntakeByPatient(patientId)
+  ]);
+  const entries = [
+    ...signedForms.map(sf => ({ kind: "consent", id: sf.id, formName: sf.formName, formId: sf.formId, signedAt: sf.signedAt })),
+    ...(intake ? [{ kind: "intake", id: intake.id, formName: I18N.t("ui.patientCaseHistory", "Patient Case History"), signedAt: intake.updatedAt || intake.createdAt || Date.now() }] : [])
+  ].sort((a, b) => b.signedAt - a.signedAt);
   return `
     <div style="text-align:center;padding:20px 0 16px;">
       <div class="avatar" style="width:64px;height:64px;font-size:22px;margin:0 auto 10px;">${initials(p.firstName,p.surname)}</div>
@@ -676,11 +688,11 @@ async function patientDetailMarkup(patientId) {
       <button class="btn-primary" data-act="new-consent">New Consent Form</button>
     </div>
     <h3>${I18N.t('ui.signedForms')}</h3>
-    ${signed.length ? signed.map(sf => {
-      const formDef = CONSENT_FORMS.find(f => f.id === sf.formId);
+    ${entries.length ? entries.map(sf => {
+      const formDef = sf.kind === "intake" ? null : CONSENT_FORMS.find(f => f.id === sf.formId);
       return `
-      <div class="list-row" data-view="${sf.id}">
-        <div class="avatar icon-sq-sm">${iconSquare(formDef ? formDef.icon : "file")}</div>
+      <div class="list-row" data-view="${sf.id}" data-kind="${sf.kind}">
+        <div class="avatar icon-sq-sm">${sf.kind === "intake" ? FORM_ICON_SET.patient : iconSquare(formDef ? formDef.icon : "file")}</div>
         <div class="meta"><p class="name">${sf.formName}</p><p class="sub">${formatDateTime(sf.signedAt)}</p></div>
         ${ICONS.chevron}
       </div>`;
@@ -697,7 +709,10 @@ function wirePatientDetailActions(patientId, root) {
   if (consentBtn) consentBtn.onclick = () => navigate("home", { tab: "forms" });
   if (deleteBtn) deleteBtn.onclick = () => openDeletePatientModal(patientId);
   root.querySelectorAll("[data-view]").forEach(el => {
-    el.onclick = () => navigate("view-signed", { signedId: el.dataset.view });
+    el.onclick = () => {
+      if (el.dataset.kind === "intake") navigate("view-intake", { intakeId: el.dataset.view });
+      else navigate("view-signed", { signedId: el.dataset.view });
+    };
   });
 }
 
