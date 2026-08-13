@@ -141,6 +141,22 @@ async function boot() {
   document.getElementById("delete-confirm-cancel-btn").onclick = closeDeletePatientModal;
   document.getElementById("delete-confirm-delete-btn").onclick = confirmDeletePatient;
 
+  // Home's Consent Forms / Signed Forms tabs: bound ONCE here via event
+  // delegation on document, rather than re-binding .onclick on the tab
+  // <button> elements every time renderHome() redraws them. Per-element
+  // rebinding can race with a fast tap that lands right as the DOM is
+  // being replaced (the old node's handler is already gone, the new
+  // node's handler isn't attached yet), which reads as "the tab just
+  // doesn't respond." A single delegated listener on a stable ancestor
+  // has no such window — it works regardless of how many times the tab
+  // buttons underneath have been torn down and recreated.
+  document.addEventListener("click", (e) => {
+    const tabBtn = e.target.closest(".home-tabs .tab");
+    if (!tabBtn) return;
+    state.homeTab = tabBtn.dataset.tab;
+    renderRoute();
+  });
+
   // No PIN has ever been set (first-time launch, or the doctor hasn't
   // opted into a PIN yet) — skip the lock screen entirely and go straight
   // into the app. The PIN screen only reappears once a PIN is set in
@@ -281,9 +297,8 @@ async function renderHome(params) {
   return {
     markup,
     after: async () => {
-      document.querySelectorAll(".home-tabs .tab").forEach(t => {
-        t.onclick = () => { state.homeTab = t.dataset.tab; renderRoute(); };
-      });
+      // Tab click handling is bound once via delegation in boot() — see
+      // the comment there. Nothing to wire up here.
       const slot = document.getElementById("home-tab-content");
       const rendered = state.homeTab === "forms" ? await renderFormsTab() : await renderSignedTab();
       slot.innerHTML = rendered.markup;
@@ -865,7 +880,11 @@ async function renderIntake(params) {
           signatureImage: sigCanvas.toDataURL("image/png")
         };
         await DB.saveIntake(record);
-        state.successReturnRoute = { route: "patient-detail", params: { patientId: params.patientId } };
+        // Per clinic request: land on the Signed Forms tab after saving,
+        // same as every other form — not the Patient Profile page. Note
+        // the Case History record itself won't appear in that list (it's
+        // stored separately from signed consent forms), but the "success"
+        // landing spot is now consistent across all forms.
         document.getElementById("success-title").textContent = "Case History Saved";
         document.getElementById("success-modal").style.display = "flex";
       };
@@ -939,11 +958,18 @@ async function renderConsent(params) {
       // would mutate the app-wide language and leak into every other
       // screen's chrome the moment the patient picks a language here.
       let screenLang = I18N.getLang();
-      populateConsentSections(form, patient, screenLang);
+      // Which checklist items (e.g. "Required Radiographs") are currently
+      // ticked — starts with everything checked, matching the previous
+      // static display, but is now a real interactive checkbox list. Kept
+      // outside populateConsentSections so it survives language switches
+      // (which redraw the section list from scratch) and gets baked into
+      // the signed record when the form is submitted.
+      const checklistSelected = new Set(form && form.checklist ? form.checklist : []);
+      populateConsentSections(form, patient, screenLang, checklistSelected);
 
       document.getElementById("lang-select").onchange = (e) => {
         screenLang = e.target.value;
-        populateConsentSections(form, patient, screenLang); // does not touch the signature canvas
+        populateConsentSections(form, patient, screenLang, checklistSelected); // does not touch the signature canvas
       };
       let fs = 16;
       document.getElementById("font-minus").onclick = () => { fs = Math.max(13, fs-2); document.getElementById("consent-sections").style.fontSize = fs+"px"; };
@@ -952,7 +978,7 @@ async function renderConsent(params) {
       initSignaturePad();
       document.getElementById("clear-sig-btn").onclick = clearSignature;
       document.getElementById("disagree-btn").onclick = () => navigate("home", { tab: "forms" });
-      document.getElementById("provide-consent-btn").onclick = () => submitConsent(params, patient, form, screenLang);
+      document.getElementById("provide-consent-btn").onclick = () => submitConsent(params, patient, form, screenLang, checklistSelected);
 
       // Bottom sheet: read first, tap "Signature" to slide up the sign panel.
       const overlay = document.getElementById("sig-drawer-overlay");
@@ -1028,7 +1054,11 @@ function buildNumberedSections(form, content, patient, lang) {
 // Kashmiri and Sindhi here) use Devanagari, so they stay left-to-right.
 const RTL_LANGS = ["ur"];
 
-function populateConsentSections(form, patient, lang) {
+// `checklistSelected` (a Set of item strings) tracks which checkboxes are
+// currently ticked on the LIVE consent screen — passed in from renderConsent's
+// closure so it survives a language switch (which redraws the whole section
+// list) and is read back out at signing time (see submitConsent).
+function populateConsentSections(form, patient, lang, checklistSelected) {
   const body = document.getElementById("consent-sections");
   if (!form) { body.innerHTML = "<p>Form not found.</p>"; return; }
   body.dir = RTL_LANGS.includes(lang) ? "rtl" : "ltr";
@@ -1038,19 +1068,48 @@ function populateConsentSections(form, patient, lang) {
 
   body.innerHTML = `
     <h2 style="margin-top:0;">${content.title}</h2>
-    ${sections.map((s, i) => renderSection(s, i + 1)).join("")}
+    ${sections.map((s, i) => renderSection(s, i + 1, { interactive: true, selected: checklistSelected })).join("")}
   `;
+
+  if (checklistSelected) {
+    body.querySelectorAll(".checklist-checkbox").forEach(cb => {
+      cb.onchange = () => {
+        if (cb.checked) checklistSelected.add(cb.dataset.item);
+        else checklistSelected.delete(cb.dataset.item);
+      };
+    });
+  }
 }
 
-function renderSection(s, num) {
+// `opts.interactive` renders real, tappable checkboxes (the live consent
+// screen, defaulting to checked); otherwise renders the static checked-icon
+// list used for the signed/printed record, filtered down to whichever items
+// were actually left checked at signing time (`opts.selected`). Records
+// signed before this feature existed have no stored selection, so they fall
+// back to showing every item — matching their original (all-checked) look.
+function renderSection(s, num, opts) {
+  opts = opts || {};
   if (s.type === "checklist") {
-    return `<h3>${num}. ${s.heading}</h3><ul class="check-list">${s.items.map(i => `<li>${i}</li>`).join("")}</ul>`;
+    if (opts.interactive) {
+      const items = s.items.map(i => `
+        <label class="check-list-item">
+          <input type="checkbox" class="checklist-checkbox" data-item="${escapeHtmlAttr(i)}" ${!opts.selected || opts.selected.has(i) ? "checked" : ""}>
+          <span>${i}</span>
+        </label>`).join("");
+      return `<h3>${num}. ${s.heading}</h3><div class="check-list interactive">${items}</div>`;
+    }
+    const items = opts.selected ? s.items.filter(i => opts.selected.has(i)) : s.items;
+    return `<h3>${num}. ${s.heading}</h3><ul class="check-list">${items.map(i => `<li>${i}</li>`).join("")}</ul>`;
   }
   if (s.type === "table") {
     const p = s.patient;
     return `<h3>${num}. ${s.heading}</h3>${patientTableMarkup(p, null, s.lang)}`;
   }
   return `<h3>${num}. ${s.heading}</h3><p ${s.pre ? 'style="white-space:pre-line;"' : ''}>${s.body}</p>`;
+}
+
+function escapeHtmlAttr(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
 // Gender is a fixed-vocabulary field (Male/Female/Other), unlike the
@@ -1131,7 +1190,7 @@ function updateSignatureUiState() {
   if (ctaLabel) ctaLabel.textContent = I18N.t('ui.signatureLabel') + (hasSignature ? " ✓" : "");
 }
 
-async function submitConsent(params, patient, form, lang) {
+async function submitConsent(params, patient, form, lang, checklistSelected) {
   if (!state.strokes.length) { toast("Please sign before providing consent."); return; }
   const signatureImage = sigCanvas.toDataURL("image/png"); // Base64/PNG raster, per PRD 3.2
   const { content: rawContent } = I18N.formContent(form.id, form.fallback, lang);
@@ -1144,7 +1203,14 @@ async function submitConsent(params, patient, form, lang) {
     languageLabel: I18N.languages()[lang],
     signatureImage,
     textSnapshot: content,
-    formConfig: { checklist: form.checklist, checklistLabel: form.checklistLabel },
+    // checklistSelected: which items were actually left checked at signing
+    // time (e.g. "Required Radiographs") — baked in so the signed/printed
+    // record reflects what was really agreed to, not the full item list.
+    formConfig: {
+      checklist: form.checklist,
+      checklistLabel: form.checklistLabel,
+      checklistSelected: checklistSelected ? Array.from(checklistSelected) : undefined
+    },
     clinicSnapshot: await DB.getSettings(),
     patientSnapshot: patient
   };
@@ -1253,6 +1319,11 @@ function wireRegistryRows() {
 async function renderViewSigned(params) {
   const r = await DB.getSignedForm(params.signedId);
   if (!r) return { markup: `<div class="empty-state">Record not found.</div>` };
+  // Records signed before checklist selection existed have no
+  // checklistSelected saved — leave selected undefined so renderSection
+  // falls back to showing every item, matching how they originally looked.
+  const checklistSelected = r.formConfig && r.formConfig.checklistSelected
+    ? new Set(r.formConfig.checklistSelected) : undefined;
   const sections = [];
   sections.push({ heading: `Purpose of ${r.formName}`, type: "text", body: r.textSnapshot.purpose });
   if (r.formConfig && r.formConfig.checklist) {
@@ -1281,7 +1352,7 @@ async function renderViewSigned(params) {
       </div>
       <div class="consent-body">
         <h2 style="margin-top:0;">${r.textSnapshot.title}</h2>
-        ${sections.map((s,i) => renderSection(s, i+1)).join("")}
+        ${sections.map((s,i) => renderSection(s, i+1, { selected: checklistSelected })).join("")}
         <h3>${sections.length+1}. Patient Details</h3>
         ${patientTableMarkup(r.patientSnapshot, { signedAt: r.signedAt, languageLabel: r.languageLabel })}
         <div style="margin-top:20px;padding:16px;border:1px solid var(--neutral-200);border-radius:14px;text-align:center;">
