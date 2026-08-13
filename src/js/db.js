@@ -179,6 +179,29 @@ const DB = {
     });
   },
 
+  async getIntakeById(id) {
+    const store = await tx(STORES.intakes);
+    return new Promise((resolve, reject) => {
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  },
+
+  // Every saved Patient Case History across all patients, used by the
+  // Signed Forms tab so Case History records show up in that list
+  // alongside signed consent forms (they're stored in a separate object
+  // store from signedForms, so they need to be fetched and merged
+  // explicitly rather than falling out of getAllSignedForms()).
+  async getAllIntakes() {
+    const store = await tx(STORES.intakes);
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  },
+
   // ---------- Signed Forms ----------
   async saveSignedForm(record) {
     const store = await tx(STORES.signedForms, "readwrite");

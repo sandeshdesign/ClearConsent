@@ -161,11 +161,33 @@ async function boot() {
   // doesn't respond." A single delegated listener on a stable ancestor
   // has no such window — it works regardless of how many times the tab
   // buttons underneath have been torn down and recreated.
+  // Walks up manually from the click target instead of using
+  // Element.closest() — some older Android system WebViews (a Capacitor
+  // build can end up running on whatever WebView version is installed on
+  // the device, which may lag far behind desktop Chrome) don't support
+  // it, which would silently break this entire listener with nothing
+  // in the visible UI to explain why.
   document.addEventListener("click", (e) => {
-    const tabBtn = e.target.closest(".home-tabs .tab");
-    if (!tabBtn) return;
-    state.homeTab = tabBtn.dataset.tab;
-    renderRoute();
+    let el = e.target;
+    while (el && el !== document.body && el !== document) {
+      if (el.classList && el.classList.contains("tab") && el.parentElement && el.parentElement.classList.contains("home-tabs")) {
+        // Route through navigate(), not a bare state.homeTab + renderRoute()
+        // — this was the actual bug. Landing on Home via
+        // navigate("home", { tab: "signed" }) (e.g. after signing a form,
+        // or backing out of a signed/case-history record) leaves
+        // state.routeParams = { tab: "signed" } in place permanently.
+        // renderRoute() re-passes that SAME stale routeParams object to
+        // renderHome() on every subsequent call, and renderHome() re-applies
+        // params.tab unconditionally — so any tab switch that only set
+        // state.homeTab directly got silently overwritten back to
+        // "signed" a moment later. navigate() updates routeParams to
+        // match the tab actually being switched to, so there's no stale
+        // value left to reassert itself.
+        navigate("home", { tab: el.dataset.tab });
+        return;
+      }
+      el = el.parentElement;
+    }
   });
 
   // No PIN has ever been set (first-time launch, or the doctor hasn't
@@ -309,7 +331,13 @@ async function renderHome(params) {
     markup,
     after: async () => {
       // Tab click handling is bound once via delegation in boot() — see
-      // the comment there. Nothing to wire up here.
+      // the comment there. Do NOT also bind .onclick directly on these
+      // buttons: a real bug was caught here where both handlers fired
+      // on the same tap, kicking off two overlapping renderRoute() calls
+      // that raced each other (one render's async continuation ran
+      // after a second render had already replaced #screen-root out
+      // from under it), leaving the tab visibly stuck / throwing errors
+      // on elements that no longer existed. One binding site only.
       const slot = document.getElementById("home-tab-content");
       const rendered = state.homeTab === "forms" ? await renderFormsTab() : await renderSignedTab();
       slot.innerHTML = rendered.markup;
@@ -1277,8 +1305,34 @@ function closeSuccessModal() {
 // ---------------------------------------------------------------------
 // Signed Forms tab (Module 7) — with Date / Type filters
 // ---------------------------------------------------------------------
+// Patient Case History records live in a separate object store from
+// signed consent forms (see db.js), so they don't come back from
+// DB.getAllSignedForms(). Fetch them separately, look up each one's
+// patient (intakes only store a patientId, not a full snapshot the way
+// signed consent forms do), and normalize them into the same shape the
+// registry list / renderRegistryGroups already expects — `kind` tags
+// which detail screen wireRegistryRows should navigate to.
+async function getSignedRegistryEntries() {
+  const [signedForms, intakes] = await Promise.all([DB.getAllSignedForms(), DB.getAllIntakes()]);
+  const patientCache = {};
+  const getPatientCached = async (id) => {
+    if (!(id in patientCache)) patientCache[id] = await DB.getPatient(id);
+    return patientCache[id];
+  };
+  const intakeEntries = await Promise.all(intakes.map(async (i) => ({
+    id: i.id,
+    kind: "intake",
+    formName: I18N.t("ui.patientCaseHistory", "Patient Case History"),
+    patientId: i.patientId,
+    signedAt: i.updatedAt || i.createdAt || Date.now(),
+    patientSnapshot: await getPatientCached(i.patientId)
+  })));
+  const signedEntries = signedForms.map(r => ({ ...r, kind: "consent" }));
+  return [...signedEntries, ...intakeEntries].sort((a, b) => b.signedAt - a.signedAt);
+}
+
 async function renderSignedTab() {
-  const all = await DB.getAllSignedForms();
+  const all = await getSignedRegistryEntries();
   const typeOptions = ["All", ...new Set(all.map(r => r.formName))];
   const markup = `
     <div class="filter-row">
@@ -1337,7 +1391,7 @@ function renderRegistryGroups(groups) {
   const out = Object.entries(groups).map(([key, items]) => {
     if (!items.length) return "";
     return `<div class="registry-group-label">${labels[key]}</div>` + items.map(r => `
-      <div class="list-row" data-view="${r.id}">
+      <div class="list-row" data-view="${r.id}" data-kind="${r.kind || "consent"}">
         <div class="avatar">${r.patientSnapshot ? initials(r.patientSnapshot.firstName, r.patientSnapshot.surname) : '?'}</div>
         <div class="meta">
           <p class="name">${r.patientSnapshot ? r.patientSnapshot.firstName+' '+r.patientSnapshot.surname : 'Unknown'}</p>
@@ -1351,7 +1405,10 @@ function renderRegistryGroups(groups) {
 
 function wireRegistryRows() {
   document.querySelectorAll("#registry-list [data-view]").forEach(el => {
-    el.onclick = () => navigate("view-signed", { signedId: el.dataset.view });
+    el.onclick = () => {
+      if (el.dataset.kind === "intake") navigate("view-intake", { intakeId: el.dataset.view });
+      else navigate("view-signed", { signedId: el.dataset.view });
+    };
   });
 }
 
@@ -1405,6 +1462,93 @@ async function renderViewSigned(params) {
     after: () => {
       document.getElementById("back-btn").onclick = () => navigate("home", { tab: "signed" });
       document.getElementById("share-btn").onclick = () => window.print();
+    }
+  };
+}
+
+// Read-only view of a saved Patient Case History, reached from the
+// Signed Forms tab (see getSignedRegistryEntries/wireRegistryRows above).
+// Mirrors renderIntake()'s 5 numbered sections and field order exactly,
+// but as plain text instead of editable inputs.
+function roField(label, value) {
+  return `<div class="field"><label>${label}</label><p style="margin:6px 0 0;">${value || '—'}</p></div>`;
+}
+function roChecklist(obj) {
+  const keys = Object.keys(obj || {}).filter(k => obj[k]);
+  return keys.length ? keys.map(il).join(", ") : '—';
+}
+
+async function renderViewIntake(params) {
+  const d = await DB.getIntakeById(params.intakeId);
+  if (!d) return { markup: `<div class="empty-state">Record not found.</div>` };
+  const patient = await DB.getPatient(d.patientId);
+
+  const markup = `
+    <div class="top-bar">
+      <button class="back-btn" id="back-btn">${ICONS.back}</button>
+      <div style="flex:1;text-align:center;">
+        <h2 style="margin:0;">${I18N.t('ui.patientCaseHistory')}</h2>
+        <div class="text-sm text-muted">Consent form</div>
+      </div>
+      <button class="icon-btn" id="share-btn" title="Share">${ICONS.share}</button>
+    </div>
+    <div class="main-scroll" style="background:#fff;">
+      <div class="clinic-brand-row" id="clinic-brand-row"></div>
+      <div class="consent-body intake-body" style="font-family:var(--font-ui);">
+        <h3>1. Patient Details</h3>
+        ${patientTableMarkup(patient)}
+
+        <h3>2. Patient Information</h3>
+        <div class="field-row">
+          ${roField("Occupation", d.occupation)}
+          ${roField("Marital Status", d.maritalStatus)}
+        </div>
+        <div class="field-row">
+          ${roField("Referred By", d.referralSource)}
+          ${roField("Date of Visit", d.visitDate)}
+        </div>
+
+        <h3>3. Chief Complaint & History</h3>
+        ${roField("Primary Complaint", d.chiefComplaint)}
+        <div class="field-row field-row-3">
+          ${roField("Symptoms", roChecklist(d.symptoms))}
+          ${roField("Progression", roChecklist(d.progression))}
+          ${roField("Onset", roChecklist(d.onset))}
+        </div>
+        ${roField("Other Symptoms", d.otherSymptoms)}
+        ${roField("Aggravating / Relieving Factors", d.aggravatingRelievingFactors)}
+
+        <h3>4. Medical History</h3>
+        ${roField("Conditions", roChecklist(d.medicalHistory))}
+        ${roField("Current Medications", d.currentMedications)}
+        ${roField("Past Medical", d.pastMedical)}
+        ${roField("Surgical History", d.surgicalHistory)}
+
+        <h3>5. Dental & Personal History</h3>
+        ${roField("Last Dental Visit", d.lastDentalVisit)}
+        <div class="field-row field-row-3">
+          ${roField("Previous Treatments", roChecklist(d.previousTreatments))}
+          ${roField("Habits", roChecklist(d.habits))}
+          ${roField("Diet", roChecklist(d.diet))}
+        </div>
+        <div class="field-row field-row-3">
+          ${roField("Sleep", d.sleep)}
+          ${roField("Brushing", d.brushingFrequency)}
+          ${roField("Brush Type", d.brushType)}
+        </div>
+
+        <div style="margin-top:20px;padding:16px;border:1px solid var(--neutral-200);border-radius:14px;text-align:center;">
+          <p class="text-sm text-muted" style="margin-top:0;">PATIENT SIGNATURE</p>
+          ${d.signatureImage ? `<img src="${d.signatureImage}" style="max-width:100%;max-height:140px;">` : '<p class="text-muted">Not signed</p>'}
+        </div>
+      </div>
+    </div>`;
+  return {
+    markup,
+    after: async () => {
+      document.getElementById("back-btn").onclick = () => navigate("home", { tab: "signed" });
+      document.getElementById("share-btn").onclick = () => window.print();
+      await renderClinicBrandRow();
     }
   };
 }
@@ -1502,6 +1646,7 @@ const ROUTES = {
   intake: renderIntake,
   consent: renderConsent,
   "view-signed": renderViewSigned,
+  "view-intake": renderViewIntake,
   settings: renderSettings
 };
 
