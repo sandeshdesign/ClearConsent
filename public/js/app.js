@@ -1091,8 +1091,12 @@ function renderSection(s, num, opts) {
   opts = opts || {};
   if (s.type === "checklist") {
     if (opts.interactive) {
+      // Same .check-row look as the Symptoms/Habits/etc. checkbox groups
+      // on the Patient Case History form: one item per row, stacked
+      // top-to-bottom, checkbox on the left with a bottom-border divider —
+      // rather than the compact checkmark-chip style used elsewhere.
       const items = s.items.map(i => `
-        <label class="check-list-item">
+        <label class="check-row">
           <input type="checkbox" class="checklist-checkbox" data-item="${escapeHtmlAttr(i)}" ${!opts.selected || opts.selected.has(i) ? "checked" : ""}>
           <span>${i}</span>
         </label>`).join("");
