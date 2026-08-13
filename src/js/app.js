@@ -808,30 +808,6 @@ async function renderIntake(params) {
           <div class="field"><label>Brush Type</label>${radioGroup('i-brushtype', INTAKE_SCHEMA.brushType, d.brushType, 'Brush Type')}</div>
         </div>
 
-        <h3>6. Clinical Examination</h3>
-        <p style="font-weight:700;margin:0 0 6px;">Extraoral Findings</p>
-        <div class="field-row field-row-3">
-          <div class="field"><label>Facial Symmetry</label>${radioGroup('i-facial', ['normal','abnormal'], d.facialSymmetry, 'Facial Symmetry')}</div>
-          <div class="field"><label>TMJ</label>${checkboxGroup('tmj', INTAKE_SCHEMA.clinicalExam.tmj, d.tmj)}</div>
-          <div class="field"><label>Lymph Nodes</label>${radioGroup('i-lymph', ['palpable','notPalpable'], d.lymphNodes, 'Lymph Nodes')}</div>
-        </div>
-        <p style="font-weight:700;margin:18px 0 6px;">Intraoral Findings</p>
-        <div class="field-row field-row-3">
-          <div class="field"><label>Oral Hygiene</label>${radioGroup('i-hygiene', ['good','fair','poor'], d.oralHygiene, 'Oral Hygiene')}</div>
-          <div class="field"><label>Gingiva</label>${radioGroup('i-gingiva', ['healthy','inflamed','receded'], d.gingiva, 'Gingiva')}</div>
-          <div class="field"><label>Teeth Status</label>${checkboxGroup('teethStatus', INTAKE_SCHEMA.clinicalExam.teethStatus, d.teethStatus)}</div>
-        </div>
-        <div class="field"><label>Soft Tissues (Tongue, Palate, Mucosa)</label><textarea id="i-softtissue" rows="2">${d.softTissues||''}</textarea></div>
-
-        <h3>7. Diagnosis & Treatment Plan</h3>
-        <div class="field"><label>Investigations Advised</label>
-          ${INTAKE_SCHEMA.investigations.map(inv => `
-            <label class="check-row"><input type="checkbox" data-inv="${inv}" ${(d.investigations||[]).includes(inv) ? 'checked' : ''}><span>${inv}</span></label>
-          `).join("")}
-        </div>
-        <div class="field"><label>Provisional Diagnosis</label><textarea id="i-provdx" rows="2">${d.provisionalDiagnosis||''}</textarea></div>
-        <div class="field"><label>Final Diagnosis</label><textarea id="i-finaldx" rows="2">${d.finalDiagnosis||''}</textarea></div>
-        <div class="field"><label>Treatment Plan</label><textarea id="i-plan" rows="3">${d.treatmentPlan||''}</textarea></div>
       </div>
     </div>
 
@@ -886,11 +862,6 @@ async function renderIntake(params) {
           lastDentalVisit: val("i-lastdental"),
           previousTreatments: groupValues("previousTreatments"), habits: groupValues("habits"), diet: groupValues("diet"),
           sleep: radioValue("i-sleep"), brushingFrequency: radioValue("i-brushing"), brushType: radioValue("i-brushtype"),
-          facialSymmetry: radioValue("i-facial"), tmj: groupValues("tmj"), lymphNodes: radioValue("i-lymph"),
-          oralHygiene: radioValue("i-hygiene"), gingiva: radioValue("i-gingiva"), teethStatus: groupValues("teethStatus"),
-          softTissues: val("i-softtissue"),
-          investigations: Array.from(document.querySelectorAll("[data-inv]")).filter(cb => cb.checked).map(cb => cb.dataset.inv),
-          provisionalDiagnosis: val("i-provdx"), finalDiagnosis: val("i-finaldx"), treatmentPlan: val("i-plan"),
           signatureImage: sigCanvas.toDataURL("image/png")
         };
         await DB.saveIntake(record);

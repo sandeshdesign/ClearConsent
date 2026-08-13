@@ -233,16 +233,7 @@ const INTAKE_SCHEMA = {
   diet: ["vegetarian", "nonVegetarian"],
   sleep: ["adequate", "inadequate"],
   brushingFrequency: ["1x", "2x"],
-  brushType: ["soft", "med", "hard"],
-  clinicalExam: {
-    extraoral: ["facialSymmetry", "lymphNodes"],
-    tmj: ["normal", "clicking", "pain", "restrictedMovement"],
-    intraoral: ["oralHygiene", "gingiva"],
-    teethStatus: ["present", "missing", "carious"]
-  },
-  // Investigations / diagnostic imaging checklist — CBCT included per clinic request.
-  investigations: ["IOPA", "OPG", "CBCT", "Blood Tests"],
-  diagnosis: ["provisionalDiagnosis", "finalDiagnosis", "treatmentPlan"]
+  brushType: ["soft", "med", "hard"]
 };
 
 if (typeof module !== "undefined") {
